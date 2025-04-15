@@ -1,11 +1,127 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Веб Лабиринт</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      background: #111;
+      color: #eee;
+      font-family: monospace;
+      text-align: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(21, 20px);
+      grid-template-rows: repeat(21, 20px);
+      gap: 1px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .cell {
+      width: 20px;
+      height: 20px;
+      background: #333;
+    }
+    .wall { background: #000; }
+    .path { background: white; }
+    .visited { background: #2196f3; }
+    .solution { background: #4caf50; }
+    .start { background: gold; }
+    .end { background: crimson; }
+  </style>
 </head>
 <body>
-    
+  <h1>Лабиринт</h1>
+  <button onclick="startDFS()">Start</button>
+  <div id="maze" class="grid"></div>
+
+  <script>
+    const size = 21;
+    const gridElement = document.getElementById('maze');
+    const grid = [];
+
+    function initGrid() {
+      for (let y = 0; y < size; y++) {
+        const row = [];
+        for (let x = 0; x < size; x++) {
+          const cell = document.createElement('div');
+          cell.classList.add('cell', 'wall');
+          gridElement.appendChild(cell);
+          row.push({ x, y, el: cell, type: 'wall' });
+        }
+        grid.push(row);
+      }
+    }
+
+    function carve(x, y) {
+      grid[y][x].type = 'path';
+      const directions = [ [0, 2], [2, 0], [0, -2], [-2, 0] ];
+      shuffle(directions);
+      for (const [dx, dy] of directions) {
+        const nx = x + dx, ny = y + dy;
+        if (ny > 0 && ny < size - 1 && nx > 0 && nx < size - 1 && grid[ny][nx].type === 'wall') {
+          grid[ny - dy/2][nx - dx/2].type = 'path';
+          carve(nx, ny);
+        }
+      }
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    async function startDFS() {
+      await dfs(1, 1, size - 2, size - 2, {});
+    }
+
+    async function dfs(x, y, ex, ey, visited) {
+      if (x === ex && y === ey) {
+        grid[y][x].el.classList.add('solution');
+        return true;
+      }
+      const key = `${x},${y}`;
+      if (visited[key] || grid[y][x].type !== 'path') return false;
+      visited[key] = true;
+      grid[y][x].el.classList.add('visited');
+      await sleep(20);
+      const dirs = [ [0, 1], [1, 0], [0, -1], [-1, 0] ];
+      for (const [dx, dy] of dirs) {
+        if (await dfs(x + dx, y + dy, ex, ey, visited)) {
+          grid[y][x].el.classList.remove('visited');
+          grid[y][x].el.classList.add('solution');
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function renderGrid() {
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const cell = grid[y][x];
+          cell.el.className = 'cell';
+          cell.el.classList.add(cell.type);
+        }
+      }
+      grid[1][1].el.classList.add('start');
+      grid[size - 2][size - 2].el.classList.add('end');
+    }
+
+    initGrid();
+    carve(1, 1);
+    grid[0][1].type = 'path';
+    grid[size - 1][size - 2].type = 'path';
+    renderGrid();
+  </script>
 </body>
 </html>
